@@ -10,6 +10,9 @@ function initialize() {
   let startButton = document.getElementById('start');
   let resetButton = document.getElementById('reset');
 
+  let taxicab = document.getElementById('taxicab');
+  let euclidean = document.getElementById('euclidean');
+
   let canvas = document.getElementById('canvas');
   let context = canvas.getContext('2d');
 
@@ -103,7 +106,16 @@ function initialize() {
   }, false);
 
   startButton.addEventListener('click', function(event) {
-    drawPath(grid, startNode, endNode, context);
+  let path;
+
+  if (taxicab.checked) {
+    path = new Astar(grid, startNode, endNode);
+  } else {
+    console.log('Hello euclidean!')
+    path = new Astar(grid, startNode, endNode);
+  }
+
+    drawPath(grid, path, endNode, context);
   }, false);
 
   resetButton.addEventListener('click', function(event) {
@@ -111,20 +123,23 @@ function initialize() {
   }, false);
 }
 
-function drawPath(grid, startNode, endNode, context) {
-  let astarPath = new Astar(grid, startNode, endNode);
+function drawPath(grid, path, endNode, context) {
   (function loop(i) {
     setTimeout(function() {
-      if (astarPath[astarPath.length - i][0] === endNode.x && astarPath[astarPath.length - i][1] === endNode.y) {
-        create(endNode, 'lightblue', context);
+      let pathX = path[path.length - i][0]
+      let pathY = path[path.length - i][1]
+      let nodeOnPath = grid[pathX][pathY]
+
+      if (nodeOnPath === endNode) {
+        create(nodeOnPath, 'lightblue', context);
       } else {
-        drawChecked(astarPath[astarPath.length - i][0], astarPath[astarPath.length - i][1], startNode.size);
+        create(nodeOnPath, 'lightgreen', context);
       }
       if (--i) {
         loop(i);
       }
     }, 50);
-  })(astarPath.length - 1);
+  })(path.length - 1);
 }
 
 function drawGrid(grid, context) {
@@ -162,14 +177,6 @@ function clear(node, context) {
   createEmpty(node, context);
 }
 
-function drawChecked(nodex, nodey, size) {
-  let canvas = document.getElementById('canvas');
-  let context = canvas.getContext('2d');
-  context.fillStyle = 'lightgreen';
-  context.fillRect(nodey * size, nodex * size, size, size);
-  context.strokeRect(nodey * size, nodex * size, size, size);
-}
-
 function reset() {
   console.log('Hello World!')
 }
@@ -186,9 +193,6 @@ function Astar(grid, start, goal) {
   while (!heap.isEmpty()) {
     let current = heap.extractMin();
 
-    if (!current) {
-      console.log(heap);
-    }
     current.closed = true;
 
     if (current === goal) {
