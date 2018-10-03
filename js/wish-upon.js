@@ -36,32 +36,6 @@ function initialize() {
   let endNode = grid[grid.length - 1][grid.length - 1];
   endNode.end = true;
 
-  // set up some blocked grids
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      if ((i % 4 === 0 || i % 6 === 0) && (j % 3 === 0 || j % 4 === 0)) {
-        grid[j][i].blocked = true;
-
-      }
-    }
-  }
-  grid[1][1].blocked = true;
-  grid[2][1].blocked = true;
-  grid[2][3].blocked = true;
-  grid[2][5].blocked = true;
-  grid[13][19].blocked = true;
-  grid[11][11].blocked = true;
-  grid[11][17].blocked = true;
-  grid[15][15].blocked = true;
-  grid[13][17].blocked = true;
-  grid[15][4].blocked = true;
-  grid[15][8].blocked = true;
-  grid[13][11].blocked = true;
-  grid[13][13].blocked = true;
-  grid[17][9].blocked = true;
-  grid[15][9].blocked = true;
-  grid[19][14].blocked = true;
-
   drawGrid(grid, context);
 
   canvas.addEventListener('click', function(event) {
@@ -75,14 +49,14 @@ function initialize() {
         startNode = null;
         clickedNode.start = false;
         clickedNode.end = true;
-        createColored(clickedNode, 'lightblue', context);
+        create(clickedNode, 'lightblue', context);
         endNode = clickedNode;
       } else {
         startNode = null;
         clickedNode.start = false;
         endNode.end = false;
         clear(endNode, context);
-        createColored(clickedNode, 'lightblue', context);
+        create(clickedNode, 'lightblue', context);
         endNode = clickedNode;
       }
     } else if (clickedNode.end === true) {
@@ -91,24 +65,24 @@ function initialize() {
       endNode = null;
       if (startNode === null) {
         startNode = clickedNode;
-        createColored(startNode, 'orange', context);
+        create(startNode, 'orange', context);
       } else {
         startNode.start = false;
         clear(startNode, context);
         startNode = clickedNode;
-        createColored(startNode, 'orange', context);
+        create(startNode, 'orange', context);
       }
     } else {
       if (startNode === null) {
         startNode = clickedNode;
         startNode.start = true;
-        createColored(startNode, 'orange', context);
+        create(startNode, 'orange', context);
       } else {
         clear(startNode, context);
         startNode = null;
         startNode = clickedNode;
         startNode.start = true;
-        createColored(startNode, 'orange', context);
+        create(startNode, 'orange', context);
       }
     }
   }, false);
@@ -124,7 +98,7 @@ function initialize() {
       clear(clickedNode, context);
     } else {
       clickedNode.blocked = true;
-      createColored(clickedNode, 'gray', context);
+      create(clickedNode, 'gray', context);
     }
   }, false);
 
@@ -142,7 +116,7 @@ function drawPath(grid, startNode, endNode, context) {
   (function loop(i) {
     setTimeout(function() {
       if (astarPath[astarPath.length - i][0] === endNode.x && astarPath[astarPath.length - i][1] === endNode.y) {
-        createColored(endNode, 'lightblue', context);
+        create(endNode, 'lightblue', context);
       } else {
         drawChecked(astarPath[astarPath.length - i][0], astarPath[astarPath.length - i][1], startNode.size);
       }
@@ -157,12 +131,14 @@ function drawGrid(grid, context) {
   for (let i = 0; i < grid.length; i++) {
     for (let j = 0; j < grid.length; j++) {
       let node = grid[i][j];
+      let chanceOfBlock = Math.floor(Math.random() * 10) + 1;
       if (node.start) {
-        createColored(node, 'orange', context);
+        create(node, 'orange', context);
       } else if (node.end) {
-        createColored(node, 'lightblue', context);
-      } else if (node.blocked) {
-        createColored(node, 'gray', context);
+        create(node, 'lightblue', context);
+      } else if (chanceOfBlock < 3) {
+        node.blocked = true;
+        create(node, 'gray', context);
       } else {
         clear(node, context);
         createEmpty(node, context);
@@ -171,14 +147,14 @@ function drawGrid(grid, context) {
   }
 }
 
-function createEmpty(node, context) {
-  context.strokeRect(node.y * node.size, node.x * node.size, node.size, node.size);
-}
-
-function createColored(node, color, context) {
+function create(node, color, context) {
   context.fillStyle = color;
   context.fillRect(node.y * node.size, node.x * node.size, node.size, node.size);
   createEmpty(node, context);
+}
+
+function createEmpty(node, context) {
+  context.strokeRect(node.y * node.size, node.x * node.size, node.size, node.size);
 }
 
 function clear(node, context) {
