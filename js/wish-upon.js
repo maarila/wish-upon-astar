@@ -4,11 +4,14 @@ function GridNode(x, y, size) {
   this.x = x;
   this.y = y;
   this.size = size;
+  this.blocked = false;
 }
 
 function initialize() {
   let startButton = document.getElementById('start');
   let resetButton = document.getElementById('reset');
+
+  let notification = document.getElementById('notification')
 
   let taxicab = document.getElementById('taxicab');
   let euclidean = document.getElementById('euclidean');
@@ -27,10 +30,10 @@ function initialize() {
     return false;
   }
 
-  for (let i = 0; i < gridSize; i++) {
-    grid[i] = new Array(gridSize)
-    for (let j = 0; j < gridSize; j++) {
-      grid[i][j] = new GridNode(i, j, nodeSize);
+  for (let y = 0; y < gridSize; y++) {
+    grid[y] = new Array(gridSize)
+    for (let x = 0; x < gridSize; x++) {
+      grid[y][x] = new GridNode(x, y, nodeSize);
     }
   }
 
@@ -43,9 +46,9 @@ function initialize() {
 
   canvas.addEventListener('click', function(event) {
     let rect = canvas.getBoundingClientRect();
-    let y = (event.clientX - rect.left) / nodeSize;
-    let x = (event.clientY - rect.top) / nodeSize;
-    let clickedNode = grid[Math.floor(x)][Math.floor(y)]
+    let x = (event.clientX - rect.left) / nodeSize;
+    let y = (event.clientY - rect.top) / nodeSize;
+    let clickedNode = grid[Math.floor(y)][Math.floor(x)]
 
     if (clickedNode.start === true) {
       if (endNode === null) {
@@ -93,9 +96,9 @@ function initialize() {
   canvas.addEventListener('contextmenu', function(event) {
     event.preventDefault();
     var rect = canvas.getBoundingClientRect();
-    let y = (event.clientX - rect.left) / nodeSize;
-    let x = (event.clientY - rect.top) / nodeSize;
-    let clickedNode = grid[Math.floor(x)][Math.floor(y)]
+    let x = (event.clientX - rect.left) / nodeSize;
+    let y = (event.clientY - rect.top) / nodeSize;
+    let clickedNode = grid[Math.floor(y)][Math.floor(x)]
     if (clickedNode.blocked) {
       clickedNode.blocked = false;
       clear(clickedNode, context);
@@ -106,16 +109,23 @@ function initialize() {
   }, false);
 
   startButton.addEventListener('click', function(event) {
-  let path;
+    let path;
 
-  if (taxicab.checked) {
-    path = new Astar(grid, startNode, endNode);
-  } else {
-    console.log('Hello euclidean!')
-    path = new Astar(grid, startNode, endNode);
-  }
+    if (taxicab.checked) {
+      path = new Astar(grid, startNode, endNode);
+    } else {
+      console.log('Hello euclidean!')
+      path = new Astar(grid, startNode, endNode);
+    }
 
-    drawPath(grid, path, endNode, context);
+    if (path.length > 0) {
+      drawPath(grid, path, endNode, context);
+    } else {
+      notification.textContent = "No path found!"
+      setTimeout(function() {
+        notification.textContent = null;
+      }, 2000)
+    }
   }, false);
 
   resetButton.addEventListener('click', function(event) {
@@ -128,7 +138,7 @@ function drawPath(grid, path, endNode, context) {
     setTimeout(function() {
       let pathX = path[path.length - i][0]
       let pathY = path[path.length - i][1]
-      let nodeOnPath = grid[pathX][pathY]
+      let nodeOnPath = grid[pathY][pathX]
 
       if (nodeOnPath === endNode) {
         create(nodeOnPath, 'lightblue', context);
@@ -143,9 +153,9 @@ function drawPath(grid, path, endNode, context) {
 }
 
 function drawGrid(grid, context) {
-  for (let i = 0; i < grid.length; i++) {
-    for (let j = 0; j < grid.length; j++) {
-      let node = grid[i][j];
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid.length; x++) {
+      let node = grid[y][x];
       let chanceOfBlock = Math.floor(Math.random() * 10) + 1;
       if (node.start) {
         create(node, 'orange', context);
@@ -164,16 +174,16 @@ function drawGrid(grid, context) {
 
 function create(node, color, context) {
   context.fillStyle = color;
-  context.fillRect(node.y * node.size, node.x * node.size, node.size, node.size);
+  context.fillRect(node.x * node.size, node.y * node.size, node.size, node.size);
   createEmpty(node, context);
 }
 
 function createEmpty(node, context) {
-  context.strokeRect(node.y * node.size, node.x * node.size, node.size, node.size);
+  context.strokeRect(node.x * node.size, node.y * node.size, node.size, node.size);
 }
 
 function clear(node, context) {
-  context.clearRect(node.y * node.size, node.x * node.size, node.size, node.size);
+  context.clearRect(node.x * node.size, node.y * node.size, node.size, node.size);
   createEmpty(node, context);
 }
 
@@ -193,36 +203,40 @@ function Astar(grid, start, goal) {
   while (!heap.isEmpty()) {
     let current = heap.extractMin();
 
-    current.closed = true;
+    if (!current) {
+      break;
+    } else {
+      current.closed = true;
 
-    if (current === goal) {
-      return pathFromStartTo(goal);
-    }
-
-    let neighbours = getNeighbours(grid, current);
-
-    for (let i = 0; i < neighbours.length; i++) {
-      let neighbour = neighbours[i];
-
-      if (neighbour.closed) {
-        continue;
+      if (current === goal) {
+        return pathFromStartTo(goal);
       }
 
-      let nextDistFromStart = current.fromStart + 1;
+      let neighbours = getNeighbours(grid, current);
 
-      if (!neighbour.open || nextDistFromStart < neighbour.fromStart) {
-        let taxicabMetric = Math.abs(neighbour.x - goal.x) + Math.abs(neighbour.y - goal.y);
+      for (let i = 0; i < neighbours.length; i++) {
+        let neighbour = neighbours[i];
 
-        neighbour.fromStart = nextDistFromStart;
-        neighbour.toNeighbour = neighbour.toNeighbour || taxicabMetric;
-        neighbour.toGoal = neighbour.fromStart + neighbour.toNeighbour;
-        neighbour.parent = current;
+        if (neighbour.closed) {
+          continue;
+        }
 
-        if (!neighbour.open) {
-          heap.insert(neighbour);
-          neighbour.open = true;
-        } else {
-          heap.update(neighbour);
+        let nextDistFromStart = current.fromStart + 1;
+
+        if (!neighbour.open || nextDistFromStart < neighbour.fromStart) {
+          let taxicabMetric = Math.abs(neighbour.x - goal.x) + Math.abs(neighbour.y - goal.y);
+
+          neighbour.fromStart = nextDistFromStart;
+          neighbour.toNeighbour = neighbour.toNeighbour || taxicabMetric;
+          neighbour.toGoal = neighbour.fromStart + neighbour.toNeighbour;
+          neighbour.parent = current;
+
+          if (!neighbour.open) {
+            neighbour.open = true;
+            heap.insert(neighbour);
+          } else {
+            heap.update(neighbour);
+          }
         }
       }
     }
@@ -232,8 +246,8 @@ function Astar(grid, start, goal) {
 }
 
 function getNeighbours(grid, node) {
-  let x = node.y;
-  let y = node.x;
+  let y = node.y;
+  let x = node.x;
   let neighbours = [];
 
   // above
@@ -304,12 +318,14 @@ BinaryHeap.prototype.findMin = function() {
 };
 
 BinaryHeap.prototype.extractMin = function() {
-  let minNode = this.heap[0];
-  this.heap[0] = this.heap[this.heapSize - 1];
-  this.heapSize--;
-  this.heapify(0);
+  if (this.heapSize > 0) {
+    let minNode = this.heap[0];
+    this.heap[0] = this.heap[this.heapSize - 1];
+    this.heapSize--;
+    this.heapify(0);
 
-  return minNode;
+    return minNode;
+  }
 };
 
 BinaryHeap.prototype.insert = function(newNode) {
